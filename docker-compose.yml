@@ -1,0 +1,61 @@
+version: "3.7"
+services:
+
+  webapi:
+    build:
+      context: .
+      dockerfile: BlazorAndAPIOnDapper.API/Dockerfile    
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+  webapi_dapr:
+    image: "daprio/daprd:1.4.3"
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "webapi",
+        "-app-port",
+        "80",
+        "-components-path",
+        "/dapr/local",
+      ]
+    volumes:
+      - "./components:/dapr"
+    depends_on:
+      - webapi
+    network_mode: "service:webapi"
+
+  website:
+    build:
+      context: .
+      dockerfile: BlazorAndAPIOnDapper.Web.SSR/Dockerfile
+    container_name: weather_website
+    ports:
+      - 80:80
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+
+  website_dapr:
+    image: "daprio/daprd:1.4.3"
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "website",
+        "-app-port",
+        "80",        
+        "-components-path",
+        "/dapr/local",
+      ]
+    volumes:
+      - "./components:/dapr"      
+    depends_on:
+      - website
+    network_mode: "service:website"
+
+networks:
+  default:
+    name: dapr_network
+    driver: bridge
